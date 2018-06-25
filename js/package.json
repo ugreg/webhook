@@ -1,0 +1,18 @@
+{
+  "name": "webhook",
+  "version": "1.0.0",
+  "description": "demo webhook and service endpoint",
+  "main": "./Main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
+  },
+  "author": "gregdegruy",
+  "license": "ISC",
+  "devDependencies": {
+    "adal-node": "^0.1.28",
+    "request": "^2.87.0",
+    "webpack": "^4.12.0",
+    "webpack-cli": "^3.0.8"
+  }
+}
