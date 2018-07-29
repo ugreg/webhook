@@ -6,8 +6,8 @@ var math = require('./math').sum;
 
 var MyApi = MyApi || {};
 
-var clientId = '4d1742a1-8c3f-4910-8e90-c44242faa860';
-var clientSecret = 'NprgQavOueHLEDdvnW9Sjy82DB/8/rNco8tAjWUM0Jo=';
+var clientId = '';
+var clientSecret = '';
 var authorityHostUrl = 'https://login.windows.net';
 var azureAdTenant = 'grdegr.onmicrosoft.com'; 
 var orgUrl = 'https://mssmartsheet.api.crm.dynamics.com';
