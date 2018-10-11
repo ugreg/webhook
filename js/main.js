@@ -3,8 +3,6 @@ var crypto = require('crypto');
 var express = require('express');
 var request = require('request');
 
-var app = express();
-
 var clientId = process.env.CLIENT_ID;
 var clientSecret = process.env.CLIENT_SECRET;
 var authorityHostUrl = 'https://login.windows.net';
@@ -16,7 +14,7 @@ var resource = 'https://orgebe09fbc.api.crm.dynamics.com';
 var resourceApiEndpoint = 'api/data/v9.0/';
 var apiUrl = resource + '/' + resourceApiEndpoint;
 var templateAuthzUrl = 'https://login.windows.net/' +
-                        tenant +
+                        azureAdTenant +
                         '/oauth2/authorize?response_type=code&client_id=' +
                         clientId +
                         '&redirect_uri=' +
@@ -28,9 +26,13 @@ function createAuthorizationUrl(state) {
   return templateAuthzUrl.replace('<state>', state);
 }
 
-// Clients get redirected here in order to create an OAuth authorize url and redirect them to AAD.
-// There they will authenticate and give their consent to allow this app access to
-// some resource they own.
+var app = express();
+var port = 1337;
+
+app.listen(port, () => console.log(`Example app listening on port ${port}!`))
+
+// Clients redirected to create an OAuth authorize url and is redirected to AAD.
+// Then they will authenticate and give consent to allow this code to access their Dynamics 365 API
 app.get('/auth', function(req, res) {
   crypto.randomBytes(48, function(ex, buf) {
     var token = buf.toString('base64').replace(/\//g,'_').replace(/\+/g,'-');
@@ -41,9 +43,7 @@ app.get('/auth', function(req, res) {
   });
 });
 
-// After consent is granted AAD redirects here.  The ADAL library is invoked via the
-// AuthenticationContext and retrieves an access token that can be used to access the
-// user owned resource.
+// After consent is granted AAD redirects here.  The ADAL library and retrieves an access token that is used to make calls to Dynamics 365.
 app.get('/getAToken', function(req, res) {
 
   var authenticationContext = new AuthenticationContext(authorityUrl);
@@ -62,20 +62,14 @@ app.get('/getAToken', function(req, res) {
         message = 'error: ' + err.message + '\n';
         return res.send(message)
       }
-      // message += 'response: ' + JSON.stringify(response);
 
-      /***
-       * Response structure will look like this
-       * response: {"tokenType":"Bearer","expiresIn":3599,"expiresOn":"2018-06-26T17:36:16.238Z",
-       * "resource":"https://smartsheetdev.api.crm.dynamics.com","accessToken":"","refreshToken":"","userId":"name@tenant.onmicrosoft.com","isUserIdDisplayable":true,"familyName":"Hedgehog","givenName":"Sonic","oid":"","tenantId":""}
-       */
       accessToken = response.accessToken;
 
       res.send('access token updated');
     }
   );
 });
-// grab one account and get some fields using $top=1
+
 app.get('/getaccount', (req, res) => {
   console.log('in get account');
 
