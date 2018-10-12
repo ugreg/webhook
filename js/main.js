@@ -3,15 +3,17 @@ var crypto = require('crypto');
 var express = require('express');
 var request = require('request');
 
+require('dotenv').config()
 var clientId = process.env.CLIENT_ID;
 var clientSecret = process.env.CLIENT_SECRET;
 var authorityHostUrl = 'https://login.windows.net';
 var azureAdTenant = 'grdegr.onmicrosoft.com';
 var authorityUrl = authorityHostUrl + '/' + azureAdTenant;
-var redirectUri = 'http://localhost:3000/getAToken';
+var redirectUri = 'http://localhost:1337/gettoken';
 
-var resource = 'https://orgebe09fbc.api.crm.dynamics.com';
-var resourceApiEndpoint = 'api/data/v9.0/';
+var dynamicsInstance = 'https://game.api.crm.dynamics.com'
+var resource = dynamicsInstance;
+var resourceApiEndpoint = '/api/data/v9.0/';
 var apiUrl = resource + '/' + resourceApiEndpoint;
 var templateAuthzUrl = 'https://login.windows.net/' +
                         azureAdTenant +
@@ -44,7 +46,8 @@ app.get('/auth', function(req, res) {
 });
 
 // After consent is granted AAD redirects here.  The ADAL library and retrieves an access token that is used to make calls to Dynamics 365.
-app.get('/getAToken', function(req, res) {
+var accessToken = '';
+app.get('/gettoken', function(req, res) {
 
   var authenticationContext = new AuthenticationContext(authorityUrl);
 
@@ -85,7 +88,7 @@ app.get('/getaccount', (req, res) => {
     res.send(response || err);
 
     if (response) {
-      var account = response.value[0];
+      var account = response.body.value[0];
       var accountId = '';
       var accountName = '';
 
@@ -98,7 +101,7 @@ app.get('/getaccount', (req, res) => {
         accountId = account.accountid.toString();
         accountName = account.name;
         id = accountId;
-        accountLink = `http://smartsheetdev.crm.dynamics.com/main.aspx?etn=${etn}&pagetype=${pagetype}&id=%7B${id}%7D`;
+        accountLink = dynamicsInstance + `main.aspx?etn=${etn}&pagetype=${pagetype}&id=%7B${id}%7D`;
       }
       console.log('GET account with id ' + accountId + ' and Name is ' + accountName);
       console.log("Here's a link to the account in Dynamics " + accountLink);
@@ -109,18 +112,57 @@ app.get('/getaccount', (req, res) => {
   });
 });
 
-var webhookEndpoint = '' + '/api/data/v9.0/serviceendpoints';
-var proxy = 'http://msbcdemo.proxy.beeceptor.com';
-var payload =
-{
-  'messageformat': 2, // json
-  'namespaceformat': 1, // Namespace Address
-  'path': ' ',
-  'userclaim': 1, //None
-  'authtype': 4, // Webhook Key
-  'contract': 8, // Webhook
-  'url': proxy,
-  'name': 'Webhook Using Code',
-  'authvalue': 'test'
-}
+app.get('/createservicendpoint', (req, res) => {
+  var webhookEndpoint = apiUrl + '/serviceendpoints';
+  var proxy = 'https://msbcdemo.free.beeceptor.com';
 
+  var webHookPayload =
+  {
+    'messageformat': 2, // json
+    'namespaceformat': 1, // Namespace Address
+    'path': '',
+    'userclaim': 1, // None
+    'authtype': 4, // Webhook Key
+    'contract': 8, // Webhook
+    'url': proxy,
+    'name': 'Webhook Using Code',
+    'authvalue': 'none'
+  };
+
+  request({
+    url: apiUrl + webhookEndpoint,
+    method: 'POST',
+    json: true,
+    body: webHookPayload,
+    headers: {
+      Authorization: 'Bearer ' + accessToken
+    }
+  }, (err, response, body) => {
+    res.send(response || err);
+  });
+});
+
+app.get('/createserviceendpointstep', (req, res) => {
+  // createStep for WebHook
+  var sdkmessageprocessingsteps = apiUrl + '/sdkmessages?$filter=name eq "create"&$select=sdkmessageid';
+  var stepEndpoint = apiUrl + '/sdkmessageprocessingsteps';
+
+  var webHookPayload =
+  {
+    'configuration':null,
+    'asyncautodelete': true,
+    'canusereadonlyconnection': false,
+    'description': 'CRM to BC: Create of account',
+    'eventhandler_serviceendpoint@odata.bind': '/serviceendpoints(09cdfe1c-d074-e811-a957-000d3a1d709f)',
+    'mode': 1,
+    'rank': 1,
+    'filteringattributes': null,
+    'name': 'CRM to BC: Create of account',
+    'sdkmessagefilterid@odata.bind': '/sdkmessagefilters(c2c5bb1b-ea3e-db11-86a7-000a3a5473e8)',
+    'sdkmessageid@odata.bind': '/sdkmessages(9ebdbb1b-ea3e-db11-86a7-000a3a5473e8)',
+    'stage': 40, // 40 - post-operation
+    'statecode': 0, // 0  enabled
+    'statuscode': 1, // 1  enabled
+    'supporteddeployment': 0 // 0 Server only
+    };
+  });
