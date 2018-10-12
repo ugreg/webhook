@@ -15,24 +15,26 @@ var dynBusinessCentralCommonEndpoint = 'https://api.businesscentral.dynamics.com
 
 var dynCrmApiUrl = dynCrmInstance + '/api/data/v9.0/';
 
-var redirectUri = 'http://localhost:1337/gettoken';
-var dynCrmAuthUrl = 'https://login.windows.net/' +
+var crmRedirectUri = 'http://localhost:1337/getcrmtoken';
+var bcRedirectUri = 'http://localhost:1337/getbctoken';
+
+var dynCrmAuthUrl = authorityHostUrl +
                         azureAdTenant +
                         '/oauth2/authorize?response_type=code&client_id=' +
                         clientId +
                         '&redirect_uri=' +
-                        redirectUri +
+                        crmRedirectUri +
                         '&state=<state>&resource=' +
                         dynCrmInstance;
 
-var dynBusinessCentralAuthUrl = 'https://login.windows.net/' +
+var dynBusinessCentralAuthUrl = authorityHostUrl + '/' +
                         azureAdTenant +
                         '/oauth2/authorize?response_type=code&client_id=' +
                         clientId +
                         '&redirect_uri=' +
-                        redirectUri +
+                        bcRedirectUri +
                         '&state=<state>&resource=' +
-                        dynBusinessCentralCommonEndpoint;
+                        'https://api.businesscentral.dynamics.com';
 
 var app = express();
 var port = 1337;
@@ -40,28 +42,39 @@ app.listen(port, () => console.log(`Example app listening on port ${port}!`))
 
 // Clients redirected to create an OAuth authorize url and is redirected to AAD.
 // Then they will authenticate and give consent to allow this code to access their Dynamics 365 API
-app.get('/auth', function(req, res) {
+app.get('/crmauth', function(req, res) {
   crypto.randomBytes(48, function(ex, buf) {
     var token = buf.toString('base64').replace(/\//g,'_').replace(/\+/g,'-');
     res.cookie('authstate', token);
     var authorizationUrl = dynCrmAuthUrl.replace('<state>', token);
+
     console.log('redirecting to auth url: ' + authorizationUrl);
     res.redirect(authorizationUrl);
   });
 });
 
+app.get('/bcauth', function(req, res) {
+  crypto.randomBytes(48, function(ex, buf) {
+    var bcToken = buf.toString('base64').replace(/\//g,'_').replace(/\+/g,'-');
+    res.cookie('bcauthstate', bcToken);
+    var dynBusinessCentralAuthUrlauthorizationUrl = dynBusinessCentralAuthUrl.replace('<state>', bcToken);
+
+    console.log('redirecting to auth url: ' + dynBusinessCentralAuthUrlauthorizationUrl);
+    res.redirect(dynBusinessCentralAuthUrlauthorizationUrl);
+  });
+});
+
 // After consent is granted AAD redirects here.  The ADAL library and retrieves an access token that is used to make calls to Dynamics 365.
 var accessToken = '';
-app.get('/gettoken', function(req, res) {
+var bcAccessToken = '';
+app.get('/getcrmtoken', function(req, res) {
 
   var authorityUrl = authorityHostUrl + '/' + azureAdTenant;
   var authenticationContext = new AuthenticationContext(authorityUrl);
-
-  console.log('getting auth context');
-
+  console.log('getting crm auth context');
   authenticationContext.acquireTokenWithAuthorizationCode(
     req.query.code,
-    redirectUri,
+    crmRedirectUri,
     dynCrmInstance,
     clientId,
     clientSecret,
@@ -73,8 +86,36 @@ app.get('/gettoken', function(req, res) {
       }
 
       accessToken = response.accessToken;
+      console.log('crm token ' + accessToken);
 
-      res.send('access token updated');
+      res.send('crm access token updated');
+    }
+  );
+});
+
+app.get('/getbctoken', function(req, res) {
+
+  var authorityUrl = authorityHostUrl + '/' + azureAdTenant;
+  var authenticationContext = new AuthenticationContext(authorityUrl);
+
+  console.log('getting bc auth context');
+  authenticationContext.acquireTokenWithAuthorizationCode(
+    req.query.code,
+    bcRedirectUri,
+    'https://api.businesscentral.dynamics.com/',
+    clientId,
+    clientSecret,
+    function(err, response) {
+      var message = '';
+      if (err) {
+        message = 'error: ' + err.message + '\n';
+        return res.send(message)
+      }
+
+      bcAccessToken = response.accessToken;
+      console.log('bc token ' + bcAccessToken);
+
+      res.send('bc access token updated');
     }
   );
 });
@@ -173,25 +214,25 @@ app.get('/createserviceendpointstep', (req, res) => {
     };
 });
 
-  app.get('/companies', (req, res) => {
+app.get('/companies', (req, res) => {
 
-    var body = '';
-    request({
-      url: dynBusinessCentralCommonEndpoint + '/companies',
-      method: 'GET',
-      headers: {
-        Authorization: 'Bearer ' + accessToken
-      },
-      json: JSON.stringify(body)
-    }, (err, response, body) => {
-      res.send(response || err);
+  var body = '';
+  request({
+    url: dynBusinessCentralCommonEndpoint + '/companies',
+    method: 'GET',
+    headers: {
+      Authorization: 'Bearer ' + bcAccessToken
+    },
+    json: JSON.stringify(body)
+  }, (err, response, body) => {
+    res.send(response || err);
 
-      if (response) {
-        var account = response.body.value[0];
-      }
-      else {
-        console.log('response is null');
-      }
-    });
+    if (response) {
+
+    }
+    else {
+      console.log('response is null');
+    }
   });
+});
 
