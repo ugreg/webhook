@@ -44,9 +44,9 @@ app.listen(port, () => console.log(`Example app listening on port ${port}!`))
 // Then they will authenticate and give consent to allow this code to access their Dynamics 365 API
 app.get('/crmauth', function(req, res) {
   crypto.randomBytes(48, function(ex, buf) {
-    var token = buf.toString('base64').replace(/\//g,'_').replace(/\+/g,'-');
-    res.cookie('authstate', token);
-    var authorizationUrl = dynCrmAuthUrl.replace('<state>', token);
+    var crmToken = buf.toString('base64').replace(/\//g,'_').replace(/\+/g,'-');
+    res.cookie('authstate', crmToken);
+    var authorizationUrl = dynCrmAuthUrl.replace('<state>', crmToken);
 
     console.log('redirecting to auth url: ' + authorizationUrl);
     res.redirect(authorizationUrl);
@@ -56,7 +56,7 @@ app.get('/crmauth', function(req, res) {
 app.get('/bcauth', function(req, res) {
   crypto.randomBytes(48, function(ex, buf) {
     var bcToken = buf.toString('base64').replace(/\//g,'_').replace(/\+/g,'-');
-    res.cookie('bcauthstate', bcToken);
+    res.cookie('authstate', bcToken);
     var dynBusinessCentralAuthUrlauthorizationUrl = dynBusinessCentralAuthUrl.replace('<state>', bcToken);
 
     console.log('redirecting to auth url: ' + dynBusinessCentralAuthUrlauthorizationUrl);
