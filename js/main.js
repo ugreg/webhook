@@ -6,39 +6,36 @@ var request = require('request');
 require('dotenv').config()
 var clientId = process.env.CLIENT_ID;
 var clientSecret = process.env.CLIENT_SECRET;
+
 var authorityHostUrl = 'https://login.windows.net';
 var azureAdTenant = 'grdegr.onmicrosoft.com';
-var authorityUrl = authorityHostUrl + '/' + azureAdTenant;
+
+var dynCrmInstance = 'https://game.api.crm.dynamics.com';
+var dynBusinessCentralCommonEndpoint = 'https://api.businesscentral.dynamics.com/v1.0/api/beta';
+
+var dynCrmApiUrl = dynCrmInstance + '/api/data/v9.0/';
+
 var redirectUri = 'http://localhost:1337/gettoken';
-
-var dynamicsInstance = 'https://game.api.crm.dynamics.com'
-var resource = dynamicsInstance;
-var resourceApiEndpoint = '/api/data/v9.0/';
-var apiUrl = resource + '/' + resourceApiEndpoint;
-
-var key = process.env.BUSINESS_CENTRAL_WEB_SERVICE_ACCESS_KEY;
-var bcClientId = process.env.BUSINESS_CENTRAL_CLIENT_ID;
-var bcClientSecret = process.env.BUSINESS_CENTRAL_CLIENT_SECRET;
-var bcEndpoint = 'https://api.businesscentral.dynamics.com/v1.0/api/beta';
-var x = 'https://api.businesscentral.dynamics.com/v1.0/' + azureAdTenant + '/api/beta';
-
-var templateAuthzUrl = 'https://login.windows.net/' +
+var dynCrmAuthUrl = 'https://login.windows.net/' +
                         azureAdTenant +
                         '/oauth2/authorize?response_type=code&client_id=' +
                         clientId +
                         '&redirect_uri=' +
                         redirectUri +
                         '&state=<state>&resource=' +
-                        resource;
+                        dynCrmInstance;
 
-
-function createAuthorizationUrl(state) {
-  return templateAuthzUrl.replace('<state>', state);
-}
+var dynBusinessCentralAuthUrl = 'https://login.windows.net/' +
+                        azureAdTenant +
+                        '/oauth2/authorize?response_type=code&client_id=' +
+                        clientId +
+                        '&redirect_uri=' +
+                        redirectUri +
+                        '&state=<state>&resource=' +
+                        dynBusinessCentralCommonEndpoint;
 
 var app = express();
 var port = 1337;
-
 app.listen(port, () => console.log(`Example app listening on port ${port}!`))
 
 // Clients redirected to create an OAuth authorize url and is redirected to AAD.
@@ -47,7 +44,7 @@ app.get('/auth', function(req, res) {
   crypto.randomBytes(48, function(ex, buf) {
     var token = buf.toString('base64').replace(/\//g,'_').replace(/\+/g,'-');
     res.cookie('authstate', token);
-    var authorizationUrl = createAuthorizationUrl(token);
+    var authorizationUrl = dynCrmAuthUrl.replace('<state>', token);
     console.log('redirecting to auth url: ' + authorizationUrl);
     res.redirect(authorizationUrl);
   });
@@ -57,6 +54,7 @@ app.get('/auth', function(req, res) {
 var accessToken = '';
 app.get('/gettoken', function(req, res) {
 
+  var authorityUrl = authorityHostUrl + '/' + azureAdTenant;
   var authenticationContext = new AuthenticationContext(authorityUrl);
 
   console.log('getting auth context');
@@ -64,7 +62,7 @@ app.get('/gettoken', function(req, res) {
   authenticationContext.acquireTokenWithAuthorizationCode(
     req.query.code,
     redirectUri,
-    resource,
+    dynCrmInstance,
     clientId,
     clientSecret,
     function(err, response) {
@@ -86,7 +84,7 @@ app.get('/getaccount', (req, res) => {
 
   var body = '';
   request({
-    url: apiUrl + '/accounts?$top=1',
+    url: dynCrmApiUrl + '/accounts?$top=1',
     method: 'GET',
     headers: {
       Authorization: 'Bearer ' + accessToken
@@ -109,7 +107,7 @@ app.get('/getaccount', (req, res) => {
         accountId = account.accountid.toString();
         accountName = account.name;
         id = accountId;
-        accountLink = dynamicsInstance + `main.aspx?etn=${etn}&pagetype=${pagetype}&id=%7B${id}%7D`;
+        accountLink = dynCrmInstance + `main.aspx?etn=${etn}&pagetype=${pagetype}&id=%7B${id}%7D`;
       }
       console.log('GET account with id ' + accountId + ' and Name is ' + accountName);
       console.log("Here's a link to the account in Dynamics " + accountLink);
@@ -121,7 +119,7 @@ app.get('/getaccount', (req, res) => {
 });
 
 app.get('/createservicendpoint', (req, res) => {
-  var webhookEndpoint = apiUrl + '/serviceendpoints';
+  var webhookEndpoint = dynCrmApiUrl + '/serviceendpoints';
   var proxy = 'https://msbcdemo.free.beeceptor.com';
 
   var webHookPayload =
@@ -138,7 +136,7 @@ app.get('/createservicendpoint', (req, res) => {
   };
 
   request({
-    url: apiUrl + webhookEndpoint,
+    url: dynCrmApiUrl + webhookEndpoint,
     method: 'POST',
     json: true,
     body: webHookPayload,
@@ -152,8 +150,8 @@ app.get('/createservicendpoint', (req, res) => {
 
 app.get('/createserviceendpointstep', (req, res) => {
   // createStep for WebHook
-  var sdkmessageprocessingsteps = apiUrl + '/sdkmessages?$filter=name eq "create"&$select=sdkmessageid';
-  var stepEndpoint = apiUrl + '/sdkmessageprocessingsteps';
+  var sdkmessageprocessingsteps = dynCrmApiUrl + '/sdkmessages?$filter=name eq "create"&$select=sdkmessageid';
+  var stepEndpoint = dynCrmApiUrl + '/sdkmessageprocessingsteps';
 
   var webHookPayload =
   {
@@ -173,7 +171,27 @@ app.get('/createserviceendpointstep', (req, res) => {
     'statuscode': 1, // 1  enabled
     'supporteddeployment': 0 // 0 Server only
     };
+});
+
+  app.get('/companies', (req, res) => {
+
+    var body = '';
+    request({
+      url: dynBusinessCentralCommonEndpoint + '/companies',
+      method: 'GET',
+      headers: {
+        Authorization: 'Bearer ' + accessToken
+      },
+      json: JSON.stringify(body)
+    }, (err, response, body) => {
+      res.send(response || err);
+
+      if (response) {
+        var account = response.body.value[0];
+      }
+      else {
+        console.log('response is null');
+      }
+    });
   });
-
-
 
