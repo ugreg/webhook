@@ -15,6 +15,13 @@ var dynamicsInstance = 'https://game.api.crm.dynamics.com'
 var resource = dynamicsInstance;
 var resourceApiEndpoint = '/api/data/v9.0/';
 var apiUrl = resource + '/' + resourceApiEndpoint;
+
+var key = process.env.BUSINESS_CENTRAL_WEB_SERVICE_ACCESS_KEY;
+var bcClientId = process.env.BUSINESS_CENTRAL_CLIENT_ID;
+var bcClientSecret = process.env.BUSINESS_CENTRAL_CLIENT_SECRET;
+var bcEndpoint = 'https://api.businesscentral.dynamics.com/v1.0/api/beta';
+var x = 'https://api.businesscentral.dynamics.com/v1.0/' + azureAdTenant + '/api/beta';
+
 var templateAuthzUrl = 'https://login.windows.net/' +
                         azureAdTenant +
                         '/oauth2/authorize?response_type=code&client_id=' +
@@ -23,6 +30,7 @@ var templateAuthzUrl = 'https://login.windows.net/' +
                         redirectUri +
                         '&state=<state>&resource=' +
                         resource;
+
 
 function createAuthorizationUrl(state) {
   return templateAuthzUrl.replace('<state>', state);
@@ -166,3 +174,6 @@ app.get('/createserviceendpointstep', (req, res) => {
     'supporteddeployment': 0 // 0 Server only
     };
   });
+
+
+

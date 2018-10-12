@@ -18,5 +18,6 @@ $ node main.js
 # References
 
 - Handle auth using ADAL for NodeJS https://github.com/AzureAD/azure-activedirectory-library-for-nodejs
+- Detailed blog on using Business Central API [blog linkcoming soon](http://example.net/).
 - Mock an API with https://beeceptor.com/
 
