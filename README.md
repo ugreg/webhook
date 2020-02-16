@@ -1,5 +1,7 @@
+<p align="center"><img src="img/red.png"></p>
+
 # Webhook
-Example Webhook creattion using REST and JavaScript. Powerful API that let's you interact with instances made in the classic admin Dynamics 365 portal. As well as instances made in the new admin center https://admin.powerplatform.microsoft.com/environments that leverage classic Dynamics 365 Solutions, Model and Canvas Driven apps. Tested with v8.2 and v9 instances.
+Example Webhook creation using REST and JavaScript. Powerful API that let's you interact with instances made in the classic admin Dynamics 365 portal. As well as instances made in the new admin center https://admin.powerplatform.microsoft.com/environments that leverage classic Dynamics 365 Solutions, Model and Canvas Driven apps. Tested with v8.2 and v9 instances.
 
 Get the Client/Application ID and Client Secret can from following this auth0 guide after creating a Web app / API in your App registrations through Azure Active Directory https://auth0.com/docs/connections/enterprise/azure-active-directory/v2. *Make sure to add a permission to Dynamics CRM Online (allows you to use the Dynamics CRM Online REST API) and Dynamics 365 (allows you to use the Dynamics Business Central REST API)) under API ACCESS > Required Permissions during the required permissions step*.
 
@@ -18,6 +20,5 @@ $ node main.js
 # References
 
 - Handle auth using ADAL for NodeJS https://github.com/AzureAD/azure-activedirectory-library-for-nodejs
-- Detailed blog on using Business Central API [blog linkcoming soon](http://example.net/).
 - Mock an API with https://beeceptor.com/
 
